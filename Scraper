@@ -1,0 +1,69 @@
+import requests
+import pandas as pd
+import json
+from datetime import datetime
+import time
+from time import sleep
+import numpy as np
+from threading import Thread
+
+
+headers = {
+    "User-Agent": "Pass User-Agent string here",
+    "Accept": "gzip,deflate,br",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Pragma": "no-cache",
+    "Cache-Control": "no-cache"
+}
+
+url = 'https://sportsbook-us-ma.draftkings.com//sites/US-MA-SB/api/v5/eventgroups/42133?format=json'
+enddate = datetime(2023, 6, 5, 0, 0, 0) 
+betsdict = {"time":[],"bettype":[],"target":[],"line":[],"decimalodds":[]}
+def scrapeDraftkings():
+    while datetime.now() < enddate:
+        sleep(np.random.randint(45,60))
+        x = requests.get(url,headers=headers)
+        r = x.json()
+        print("STATUSCODE:",x.status_code, "DATE:TIME", datetime.now())
+        if x.status_code == 200:
+            for x in r["eventGroup"]["offerCategories"]:
+                    if("offerSubcategoryDescriptors") in x:
+                        for y in x["offerSubcategoryDescriptors"]:
+                            if("offerSubcategory") in y:
+                                try:
+                                    for z in y["offerSubcategory"]["offers"]:
+                                        ### ACCESS INDIVIDUAL GAMES
+                                        for a in z:
+                                            ## ACCESS INDIVIDUAL OUTCOMES
+                                            if("outcomes") in a:
+                                                for b in a["outcomes"]:
+                                                    betsdict["time"].append(datetime.now())
+                                                    try: betsdict["bettype"].append(a["label"])
+                                                    except: betsdict["bettype"].append("Null")
+                                                    try: betsdict["target"].append(b["label"])
+                                                    except: betsdict["target"].append("Null")
+                                                    try: betsdict["line"].append(b["oddsAmerican"])
+                                                    except: betsdict["line"].append("Null")
+                                                    try: betsdict["decimalodds"].append(b["oddsDecimal"]) 
+                                                    except: betsdict["decimalodds"].append("Null") 
+                                            else:
+                                                print("Outcomes not found")       
+                                except:
+                                    None
+                            else:
+                                None
+                    else:
+                        None
+            df = pd.DataFrame.from_dict(betsdict)
+            df.to_csv("Insert CSV File name here")
+        else:
+            print(x.status_code)
+            print("Connection closed")
+            x.close()
+            break
+
+scrapeDraftkings()
+
+
+threading = Thread(target=scrapeDraftkings, threading=True, name='DKScraper')
+threading.start()
